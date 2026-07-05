@@ -1,6 +1,6 @@
 export const siteConfig = {
   name: "Sumit Keshari",
-  title: "Senior Platform Engineer",
+  title: "Backend Engineer",
   description: "Portfolio website of Sumit Keshari",
   accentColor: "#7e22ce",
   social: {
@@ -9,12 +9,12 @@ export const siteConfig = {
     github: "https://github.com/kesharisumit",
   },
   aboutMe:
-    "I'm a Senior Platform Engineer with deep expertise in backend systems, workflow automation, and systems programming. " +
+    "I'm a Backend Engineer with deep expertise in backend systems, workflow automation, and systems programming. " +
     "Currently at ICICI Bank, I build high-throughput event-driven architectures and automate security operations (SOAR), significantly reducing manual overhead and incident response times. " +
     "My engineering approach emphasizes performance, scalability, and robust architecture. I have a strong foundation in C++ systems programming, having built custom interpreters, Redis-compatible in-memory databases, and POSIX-compliant shells from scratch. " +
     "I thrive on solving complex backend challenges, from spatial indexing and routing algorithms to orchestrating distributed system integrations.",
   skills: [
-    "System Design (HLD)", "C++", "Python", "Bash", "JavaScript", 
+    "Data Structures and Algorithms", "System Design (HLD)", "C++", "Python", "Bash", "JavaScript", 
     "Node.js", "Express.js", "REST APIs", "TCP Sockets", 
     "SQL", "MongoDB", "Redis", 
     "Process Management", "IPC Pipes", "Git", "Linux", "CMake"

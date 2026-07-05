@@ -60,10 +60,10 @@ import { siteConfig } from "../config";
           </div>
           
           {/* Heatmap Container */}
-          <div class="mt-4 overflow-x-auto pb-4">
-            <div id="lc-heatmap-container" class="min-w-max hidden flex flex-col items-start gap-1">
+          <div class="mt-4 pb-4 w-full">
+            <div id="lc-heatmap-container" class="hidden flex flex-col items-start gap-1 w-full">
               {/* The grid will be injected here */}
-              <div id="lc-heatmap-grid" class="grid gap-[3px] auto-cols-[12px] grid-rows-7 grid-flow-col"></div>
+              <div id="lc-heatmap-grid" class="grid gap-1 w-full" style="grid-template-columns: repeat(53, 1fr);"></div>
               {/* Months labels */}
               <div id="lc-heatmap-months" class="flex text-xs text-gray-500 mt-1 w-full relative h-4"></div>
             </div>
@@ -138,9 +138,6 @@ import { siteConfig } from "../config";
     
     // We want 52 weeks (364 days). Let's go back 364 days from today.
     const today = new Date();
-    // Align to Saturday so we get clean columns (assuming weeks end on Saturday or similar)
-    // Actually, LeetCode/GitHub usually starts rows on Sunday.
-    // Let's just generate 365 days ending today.
     const daysToGenerate = 365;
     const startDate = new Date(today);
     startDate.setDate(today.getDate() - daysToGenerate + 1);
@@ -150,11 +147,14 @@ import { siteConfig } from "../config";
     startDate.setDate(startDate.getDate() - startDayOfWeek);
     
     const totalDays = Math.round((today - startDate) / (1000 * 60 * 60 * 24)) + 1;
+    const totalColumns = Math.ceil(totalDays / 7);
+    
+    // Set dynamic columns in case it's 52 or 53
+    grid.style.gridTemplateColumns = `repeat(${totalColumns}, 1fr)`;
     
     const monthNames = ['Jan', 'Feb', 'Mar', 'Apr', 'May', 'Jun', 'Jul', 'Aug', 'Sep', 'Oct', 'Nov', 'Dec'];
     let lastMonth = -1;
     
-    // Create cells
     let currentColumn = 0;
     
     for (let i = 0; i < totalDays; i++) {
@@ -165,16 +165,17 @@ import { siteConfig } from "../config";
       const count = submissionsByDate.get(dateString) || 0;
       
       const cell = document.createElement('div');
-      cell.className = 'w-[12px] h-[12px] rounded-sm';
+      // Use aspect-square so it scales proportionally with width
+      cell.className = 'w-full aspect-square rounded-sm';
       cell.title = `${count} submissions on ${dateString}`;
       
       // Determine color
       if (count === 0) {
         cell.classList.add('bg-gray-200');
       } else if (count <= 2) {
-        cell.classList.add('bg-green-200');
+        cell.classList.add('bg-green-300');
       } else if (count <= 5) {
-        cell.classList.add('bg-green-400');
+        cell.classList.add('bg-green-500');
       } else if (count <= 10) {
         cell.classList.add('bg-green-600');
       } else {
@@ -189,9 +190,9 @@ import { siteConfig } from "../config";
           lastMonth = currentDate.getMonth();
           const monthLabel = document.createElement('div');
           monthLabel.textContent = monthNames[lastMonth];
-          // Each column is 12px wide + 3px gap = 15px.
           monthLabel.style.position = 'absolute';
-          monthLabel.style.left = `${currentColumn * 15}px`;
+          // Use percentage to align perfectly with the responsive grid
+          monthLabel.style.left = `${(currentColumn / totalColumns) * 100}%`;
           monthsContainer.appendChild(monthLabel);
         }
         currentColumn++;

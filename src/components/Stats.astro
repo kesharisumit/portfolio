@@ -17,11 +17,11 @@ import { siteConfig } from "../config";
     <div class="lg:col-span-8">
       <div class="space-y-8">
         
-        {/* LeetCode Stats */}
+        {/* LeetCode Overall Stats */}
         <div class="bg-white rounded-lg shadow-sm border border-gray-100 p-4 sm:p-5 md:p-6 hover:shadow-md transition-shadow duration-300">
           <div class="flex flex-col sm:flex-row sm:items-center sm:justify-between mb-4">
             <div>
-              <h3 class="text-lg sm:text-xl font-semibold text-gray-900">LeetCode Rating</h3>
+              <h3 class="text-lg sm:text-xl font-semibold text-gray-900">LeetCode Profile</h3>
               <p class="text-base sm:text-lg" style={`color: ${siteConfig.accentColor}`}>ksri_sumit</p>
             </div>
             <span id="leetcode-loading" class="text-sm text-gray-500 mt-2 sm:mt-0">Fetching live data...</span>
@@ -49,23 +49,23 @@ import { siteConfig } from "../config";
           </div>
         </div>
 
-        {/* LeetCode Submission Graph */}
+        {/* LeetCode Charts (Heatmap + Line Graph) */}
         <div class="bg-white rounded-lg shadow-sm border border-gray-100 p-4 sm:p-5 md:p-6 hover:shadow-md transition-shadow duration-300 overflow-hidden">
           <div class="flex flex-col sm:flex-row sm:items-center sm:justify-between mb-4">
             <div>
-              <h3 class="text-lg sm:text-xl font-semibold text-gray-900">LeetCode Submissions</h3>
-              <p class="text-base sm:text-lg" style={`color: ${siteConfig.accentColor}`}>ksri_sumit</p>
+              <h3 class="text-lg sm:text-xl font-semibold text-gray-900">Activity & Ratings</h3>
             </div>
-            <div id="lc-heatmap-loading" class="text-sm text-gray-500">Loading graph...</div>
+            <div id="lc-charts-loading" class="text-sm text-gray-500">Loading graphs...</div>
           </div>
           
-          {/* Heatmap Container */}
-          <div class="mt-4 pb-4 w-full">
-            <div id="lc-heatmap-container" class="hidden flex flex-col items-start gap-1 w-full">
-              {/* The grid will be injected here */}
-              <div id="lc-heatmap-grid" class="grid gap-1 w-full" style="grid-template-columns: repeat(53, 1fr);"></div>
-              {/* Months labels */}
-              <div id="lc-heatmap-months" class="flex text-xs text-gray-500 mt-1 w-full relative h-4"></div>
+          <div id="lc-charts-container" class="hidden flex flex-col gap-8 w-full mt-6">
+            <div>
+              <h4 class="text-sm font-semibold text-gray-500 uppercase tracking-wider mb-2">Submission Heatmap (Past Year)</h4>
+              <div id="lc-heatmap" class="w-full h-[200px]"></div>
+            </div>
+            <div>
+              <h4 class="text-sm font-semibold text-gray-500 uppercase tracking-wider mb-2">Contest Rating History</h4>
+              <div id="lc-rating-graph" class="w-full h-[300px]"></div>
             </div>
           </div>
         </div>
@@ -75,134 +75,147 @@ import { siteConfig } from "../config";
   </div>
 </section>
 
+<!-- Include Apache ECharts from CDN -->
+<script src="https://cdn.jsdelivr.net/npm/echarts@5.5.0/dist/echarts.min.js"></script>
+
 <script>
-  // Fetch LeetCode Contest Stats
-  async function fetchLeetCodeStats() {
+  async function fetchLeetCodeData() {
     try {
-      const response = await fetch('https://alfa-leetcode-api.onrender.com/ksri_sumit/contest');
-      const data = await response.json();
+      // Fetch both APIs in parallel
+      const [contestRes, calendarRes] = await Promise.all([
+        fetch('https://alfa-leetcode-api.onrender.com/ksri_sumit/contest'),
+        fetch('https://alfa-leetcode-api.onrender.com/ksri_sumit/calendar')
+      ]);
       
-      if (data && data.contestRating) {
-        document.getElementById('lc-rating').textContent = Math.round(data.contestRating).toString();
-        document.getElementById('lc-ranking').textContent = data.contestGlobalRanking.toLocaleString();
-        document.getElementById('lc-top').textContent = data.contestTopPercentage + '%';
-        document.getElementById('lc-contests').textContent = data.contestAttend.toString();
+      const contestData = await contestRes.json();
+      const calendarData = await calendarRes.json();
+      
+      // 1. Update Stat Cards
+      if (contestData && contestData.contestRating) {
+        document.getElementById('lc-rating').textContent = Math.round(contestData.contestRating).toString();
+        document.getElementById('lc-ranking').textContent = contestData.contestGlobalRanking.toLocaleString();
+        document.getElementById('lc-top').textContent = contestData.contestTopPercentage + '%';
+        document.getElementById('lc-contests').textContent = contestData.contestAttend.toString();
         
         document.getElementById('leetcode-loading').classList.add('hidden');
         document.getElementById('leetcode-stats').classList.remove('hidden');
-      } else {
-        document.getElementById('leetcode-loading').textContent = 'Unable to load rating at this time.';
       }
-    } catch (error) {
-      document.getElementById('leetcode-loading').textContent = 'Error fetching live stats.';
-      console.error('Error fetching LeetCode stats:', error);
-    }
-  }
 
-  // Fetch and Render LeetCode Heatmap
-  async function fetchLeetCodeHeatmap() {
-    try {
-      const response = await fetch('https://alfa-leetcode-api.onrender.com/ksri_sumit/calendar');
-      const data = await response.json();
-      
-      if (data && data.submissionCalendar) {
-        const calData = JSON.parse(data.submissionCalendar);
+      // Initialize ECharts instances
+      const heatmapChart = echarts.init(document.getElementById('lc-heatmap'));
+      const ratingChart = echarts.init(document.getElementById('lc-rating-graph'));
+
+      // 2. Prepare Heatmap Data
+      if (calendarData && calendarData.submissionCalendar) {
+        const calMap = JSON.parse(calendarData.submissionCalendar);
+        const heatmapPoints = [];
         
-        // Map timestamps to dates
-        const submissionsByDate = new Map();
-        for (const [timestamp, count] of Object.entries(calData)) {
-          // timestamp is string, convert to int, multiply by 1000 for ms
+        for (const [timestamp, count] of Object.entries(calMap)) {
           const date = new Date(parseInt(timestamp) * 1000);
           const dateString = date.toISOString().split('T')[0];
-          submissionsByDate.set(dateString, count);
+          heatmapPoints.push([dateString, count]);
         }
-        
-        renderHeatmap(submissionsByDate);
-        
-        document.getElementById('lc-heatmap-loading').classList.add('hidden');
-        document.getElementById('lc-heatmap-container').classList.remove('hidden');
-      } else {
-        document.getElementById('lc-heatmap-loading').textContent = 'Unable to load submission graph.';
-      }
-    } catch (error) {
-      document.getElementById('lc-heatmap-loading').textContent = 'Error fetching submission graph.';
-      console.error('Error fetching LeetCode calendar:', error);
-    }
-  }
 
-  function renderHeatmap(submissionsByDate) {
-    const grid = document.getElementById('lc-heatmap-grid');
-    const monthsContainer = document.getElementById('lc-heatmap-months');
-    grid.innerHTML = '';
-    monthsContainer.innerHTML = '';
-    
-    // We want 52 weeks (364 days). Let's go back 364 days from today.
-    const today = new Date();
-    const daysToGenerate = 365;
-    const startDate = new Date(today);
-    startDate.setDate(today.getDate() - daysToGenerate + 1);
-    
-    // Adjust start date to previous Sunday so the grid aligns to a 7-day week
-    const startDayOfWeek = startDate.getDay();
-    startDate.setDate(startDate.getDate() - startDayOfWeek);
-    
-    const totalDays = Math.round((today - startDate) / (1000 * 60 * 60 * 24)) + 1;
-    const totalColumns = Math.ceil(totalDays / 7);
-    
-    // Set dynamic columns in case it's 52 or 53
-    grid.style.gridTemplateColumns = `repeat(${totalColumns}, 1fr)`;
-    
-    const monthNames = ['Jan', 'Feb', 'Mar', 'Apr', 'May', 'Jun', 'Jul', 'Aug', 'Sep', 'Oct', 'Nov', 'Dec'];
-    let lastMonth = -1;
-    
-    let currentColumn = 0;
-    
-    for (let i = 0; i < totalDays; i++) {
-      const currentDate = new Date(startDate);
-      currentDate.setDate(startDate.getDate() + i);
-      
-      const dateString = currentDate.toISOString().split('T')[0];
-      const count = submissionsByDate.get(dateString) || 0;
-      
-      const cell = document.createElement('div');
-      // Use aspect-square so it scales proportionally with width
-      cell.className = 'w-full aspect-square rounded-sm';
-      cell.title = `${count} submissions on ${dateString}`;
-      
-      // Determine color
-      if (count === 0) {
-        cell.classList.add('bg-gray-200');
-      } else if (count <= 2) {
-        cell.classList.add('bg-green-300');
-      } else if (count <= 5) {
-        cell.classList.add('bg-green-500');
-      } else if (count <= 10) {
-        cell.classList.add('bg-green-600');
-      } else {
-        cell.classList.add('bg-green-800');
+        const todayDate = new Date();
+        const oneYearAgoDate = new Date();
+        oneYearAgoDate.setFullYear(todayDate.getFullYear() - 1);
+        
+        const today = todayDate.toISOString().split('T')[0];
+        const oneYearAgo = oneYearAgoDate.toISOString().split('T')[0];
+
+        heatmapChart.setOption({
+          tooltip: {
+            position: 'top',
+            formatter: function(p) {
+              const count = p.data[1] || 0;
+              return `${count} submissions on ${p.data[0]}`;
+            }
+          },
+          visualMap: {
+            show: false,
+            min: 0,
+            max: 15,
+            type: 'piecewise',
+            pieces: [
+              {value: 0, color: '#ebedf0'},
+              {min: 1, max: 2, color: '#9be9a8'},
+              {min: 3, max: 5, color: '#40c463'},
+              {min: 6, max: 10, color: '#30a14e'},
+              {min: 11, color: '#216e39'}
+            ]
+          },
+          calendar: {
+            top: 30, left: 30, right: 10, bottom: 10,
+            cellSize: ['auto', 15],
+            range: [oneYearAgo, today],
+            itemStyle: { borderWidth: 3, borderColor: '#fff' },
+            yearLabel: { show: false },
+            splitLine: { show: false },
+            dayLabel: { nameMap: ['S', 'M', 'T', 'W', 'T', 'F', 'S'], color: '#7a7a7a' },
+            monthLabel: { color: '#7a7a7a' }
+          },
+          series: {
+            type: 'heatmap',
+            coordinateSystem: 'calendar',
+            data: heatmapPoints
+          }
+        });
       }
-      
-      grid.appendChild(cell);
-      
-      // Handle month labels
-      if (currentDate.getDay() === 0) { // Sunday, start of a new column
-        if (currentDate.getMonth() !== lastMonth) {
-          lastMonth = currentDate.getMonth();
-          const monthLabel = document.createElement('div');
-          monthLabel.textContent = monthNames[lastMonth];
-          monthLabel.style.position = 'absolute';
-          // Use percentage to align perfectly with the responsive grid
-          monthLabel.style.left = `${(currentColumn / totalColumns) * 100}%`;
-          monthsContainer.appendChild(monthLabel);
-        }
-        currentColumn++;
+
+      // 3. Prepare Rating Graph Data
+      if (contestData && contestData.contestParticipation) {
+        const ratingPoints = [];
+        contestData.contestParticipation.forEach(c => {
+          const date = new Date(c.contest.startTime * 1000).toISOString().split('T')[0];
+          ratingPoints.push([date, Math.round(c.rating)]);
+        });
+
+        ratingChart.setOption({
+          tooltip: { trigger: 'axis', formatter: '{b} <br/> Rating: {c}' },
+          grid: { top: 10, left: 40, right: 20, bottom: 30 },
+          xAxis: { 
+            type: 'time', 
+            splitLine: { show: false },
+            axisLine: { lineStyle: { color: '#ccc' } },
+            axisLabel: { color: '#7a7a7a' }
+          },
+          yAxis: { 
+            type: 'value', 
+            min: 'dataMin',
+            splitLine: { lineStyle: { color: '#f0f0f0' } },
+            axisLabel: { color: '#7a7a7a' }
+          },
+          series: [{
+            type: 'line',
+            data: ratingPoints,
+            smooth: true,
+            lineStyle: { color: '#f59e0b', width: 3 },
+            itemStyle: { color: '#f59e0b' },
+            areaStyle: {
+              color: new echarts.graphic.LinearGradient(0, 0, 0, 1, [
+                { offset: 0, color: 'rgba(245, 158, 11, 0.4)' },
+                { offset: 1, color: 'rgba(245, 158, 11, 0.05)' }
+              ])
+            }
+          }]
+        });
       }
+
+      document.getElementById('lc-charts-loading').classList.add('hidden');
+      document.getElementById('lc-charts-container').classList.remove('hidden');
+
+      // Make charts responsive
+      window.addEventListener('resize', () => {
+        heatmapChart.resize();
+        ratingChart.resize();
+      });
+
+    } catch (error) {
+      document.getElementById('lc-charts-loading').textContent = 'Error fetching graphs.';
+      console.error('Error fetching LeetCode data:', error);
     }
   }
 
   // Execute on load
-  document.addEventListener('DOMContentLoaded', () => {
-    fetchLeetCodeStats();
-    fetchLeetCodeHeatmap();
-  });
+  document.addEventListener('DOMContentLoaded', fetchLeetCodeData);
 </script>

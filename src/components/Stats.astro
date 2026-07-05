@@ -56,13 +56,17 @@ import { siteConfig } from "../config";
               <h3 class="text-lg sm:text-xl font-semibold text-gray-900">LeetCode Submissions</h3>
               <p class="text-base sm:text-lg" style={`color: ${siteConfig.accentColor}`}>ksri_sumit</p>
             </div>
+            <div id="lc-heatmap-loading" class="text-sm text-gray-500">Loading graph...</div>
           </div>
-          <div class="mt-4 overflow-x-auto flex justify-center">
-            <img 
-              src={`https://leetcard.jacoblin.cool/ksri_sumit?ext=activity`} 
-              alt="ksri_sumit's LeetCode Activity Graph" 
-              class="w-full min-w-[700px] max-w-3xl"
-            />
+          
+          {/* Heatmap Container */}
+          <div class="mt-4 overflow-x-auto pb-4">
+            <div id="lc-heatmap-container" class="min-w-max hidden flex flex-col items-start gap-1">
+              {/* The grid will be injected here */}
+              <div id="lc-heatmap-grid" class="grid gap-[3px] auto-cols-[12px] grid-rows-7 grid-flow-col"></div>
+              {/* Months labels */}
+              <div id="lc-heatmap-months" class="flex text-xs text-gray-500 mt-1 w-full relative h-4"></div>
+            </div>
           </div>
         </div>
 
@@ -95,6 +99,109 @@ import { siteConfig } from "../config";
     }
   }
 
+  // Fetch and Render LeetCode Heatmap
+  async function fetchLeetCodeHeatmap() {
+    try {
+      const response = await fetch('https://alfa-leetcode-api.onrender.com/ksri_sumit/calendar');
+      const data = await response.json();
+      
+      if (data && data.submissionCalendar) {
+        const calData = JSON.parse(data.submissionCalendar);
+        
+        // Map timestamps to dates
+        const submissionsByDate = new Map();
+        for (const [timestamp, count] of Object.entries(calData)) {
+          // timestamp is string, convert to int, multiply by 1000 for ms
+          const date = new Date(parseInt(timestamp) * 1000);
+          const dateString = date.toISOString().split('T')[0];
+          submissionsByDate.set(dateString, count);
+        }
+        
+        renderHeatmap(submissionsByDate);
+        
+        document.getElementById('lc-heatmap-loading').classList.add('hidden');
+        document.getElementById('lc-heatmap-container').classList.remove('hidden');
+      } else {
+        document.getElementById('lc-heatmap-loading').textContent = 'Unable to load submission graph.';
+      }
+    } catch (error) {
+      document.getElementById('lc-heatmap-loading').textContent = 'Error fetching submission graph.';
+      console.error('Error fetching LeetCode calendar:', error);
+    }
+  }
+
+  function renderHeatmap(submissionsByDate) {
+    const grid = document.getElementById('lc-heatmap-grid');
+    const monthsContainer = document.getElementById('lc-heatmap-months');
+    grid.innerHTML = '';
+    monthsContainer.innerHTML = '';
+    
+    // We want 52 weeks (364 days). Let's go back 364 days from today.
+    const today = new Date();
+    // Align to Saturday so we get clean columns (assuming weeks end on Saturday or similar)
+    // Actually, LeetCode/GitHub usually starts rows on Sunday.
+    // Let's just generate 365 days ending today.
+    const daysToGenerate = 365;
+    const startDate = new Date(today);
+    startDate.setDate(today.getDate() - daysToGenerate + 1);
+    
+    // Adjust start date to previous Sunday so the grid aligns to a 7-day week
+    const startDayOfWeek = startDate.getDay();
+    startDate.setDate(startDate.getDate() - startDayOfWeek);
+    
+    const totalDays = Math.round((today - startDate) / (1000 * 60 * 60 * 24)) + 1;
+    
+    const monthNames = ['Jan', 'Feb', 'Mar', 'Apr', 'May', 'Jun', 'Jul', 'Aug', 'Sep', 'Oct', 'Nov', 'Dec'];
+    let lastMonth = -1;
+    
+    // Create cells
+    let currentColumn = 0;
+    
+    for (let i = 0; i < totalDays; i++) {
+      const currentDate = new Date(startDate);
+      currentDate.setDate(startDate.getDate() + i);
+      
+      const dateString = currentDate.toISOString().split('T')[0];
+      const count = submissionsByDate.get(dateString) || 0;
+      
+      const cell = document.createElement('div');
+      cell.className = 'w-[12px] h-[12px] rounded-sm';
+      cell.title = `${count} submissions on ${dateString}`;
+      
+      // Determine color
+      if (count === 0) {
+        cell.classList.add('bg-gray-200');
+      } else if (count <= 2) {
+        cell.classList.add('bg-green-200');
+      } else if (count <= 5) {
+        cell.classList.add('bg-green-400');
+      } else if (count <= 10) {
+        cell.classList.add('bg-green-600');
+      } else {
+        cell.classList.add('bg-green-800');
+      }
+      
+      grid.appendChild(cell);
+      
+      // Handle month labels
+      if (currentDate.getDay() === 0) { // Sunday, start of a new column
+        if (currentDate.getMonth() !== lastMonth) {
+          lastMonth = currentDate.getMonth();
+          const monthLabel = document.createElement('div');
+          monthLabel.textContent = monthNames[lastMonth];
+          // Each column is 12px wide + 3px gap = 15px.
+          monthLabel.style.position = 'absolute';
+          monthLabel.style.left = `${currentColumn * 15}px`;
+          monthsContainer.appendChild(monthLabel);
+        }
+        currentColumn++;
+      }
+    }
+  }
+
   // Execute on load
-  document.addEventListener('DOMContentLoaded', fetchLeetCodeStats);
+  document.addEventListener('DOMContentLoaded', () => {
+    fetchLeetCodeStats();
+    fetchLeetCodeHeatmap();
+  });
 </script>

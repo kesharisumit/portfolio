@@ -75,6 +75,8 @@ export const siteConfig = {
       degree: "Masters of Technology, Computer Science Engineering (CSE)",
       dateRange: "August 2020 – July 2022",
       achievements: [
+        "Graduated with 7.5 GPA",
+        "First Runner Up: IS3, IIT Jodhpur's ACM Student Chapter Ideathon, 2022",
         "Majored in security, privacy preservation and blockchain",
       ],
     },
@@ -83,6 +85,7 @@ export const siteConfig = {
       degree: "Bachelor of Technology, Computer Science Engineering (CSE)",
       dateRange: "April 2016 – July 2020",
       achievements: [
+        "Graduated with 8.02 GPA",
         "Core computer science fundamentals and systems engineering",
       ],
     },

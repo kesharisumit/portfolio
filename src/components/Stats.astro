@@ -49,24 +49,18 @@ import { siteConfig } from "../config";
           </div>
         </div>
 
-        {/* LeetCode Charts (Heatmap + Line Graph) */}
+        {/* LeetCode Heatmap */}
         <div class="bg-white rounded-lg shadow-sm border border-gray-100 p-4 sm:p-5 md:p-6 hover:shadow-md transition-shadow duration-300 overflow-hidden">
           <div class="flex flex-col sm:flex-row sm:items-center sm:justify-between mb-4">
             <div>
-              <h3 class="text-lg sm:text-xl font-semibold text-gray-900">Activity & Ratings</h3>
+              <h3 class="text-lg sm:text-xl font-semibold text-gray-900">Submission Heatmap</h3>
             </div>
-            <div id="lc-charts-loading" class="text-sm text-gray-500">Loading graphs...</div>
+            <div id="lc-heatmap-loading" class="text-sm text-gray-500">Loading graph...</div>
           </div>
           
-          <div id="lc-charts-container" class="hidden flex flex-col gap-8 w-full mt-6">
-            <div>
-              <h4 class="text-sm font-semibold text-gray-500 uppercase tracking-wider mb-2">Submission Heatmap (Past Year)</h4>
-              <div id="lc-heatmap" class="w-full h-[200px]"></div>
-            </div>
-            <div>
-              <h4 class="text-sm font-semibold text-gray-500 uppercase tracking-wider mb-2">Contest Rating History</h4>
-              <div id="lc-rating-graph" class="w-full h-[300px]"></div>
-            </div>
+          <div id="lc-heatmap-container" class="hidden flex flex-col gap-2 w-full mt-6">
+            <div id="lc-heatmap-grid" class="grid gap-[3px] w-full grid-rows-7 grid-flow-col" style="grid-template-columns: repeat(52, minmax(0, 1fr));"></div>
+            <div id="lc-heatmap-months" class="flex text-xs text-gray-500 mt-1 w-full relative h-4"></div>
           </div>
         </div>
 
@@ -74,9 +68,6 @@ import { siteConfig } from "../config";
     </div>
   </div>
 </section>
-
-<!-- Include Apache ECharts from CDN -->
-<script src="https://cdn.jsdelivr.net/npm/echarts@5.5.0/dist/echarts.min.js"></script>
 
 <script>
   async function fetchLeetCodeData() {
@@ -101,117 +92,88 @@ import { siteConfig } from "../config";
         document.getElementById('leetcode-stats').classList.remove('hidden');
       }
 
-      // Initialize ECharts instances
-      const heatmapChart = echarts.init(document.getElementById('lc-heatmap'));
-      const ratingChart = echarts.init(document.getElementById('lc-rating-graph'));
-
-      // 2. Prepare Heatmap Data
+      // 2. Render Heatmap
       if (calendarData && calendarData.submissionCalendar) {
         const calMap = JSON.parse(calendarData.submissionCalendar);
-        const heatmapPoints = [];
         
+        // Map timestamps to dates
+        const submissionsByDate = new Map();
         for (const [timestamp, count] of Object.entries(calMap)) {
           const date = new Date(parseInt(timestamp) * 1000);
           const dateString = date.toISOString().split('T')[0];
-          heatmapPoints.push([dateString, count]);
+          submissionsByDate.set(dateString, count);
         }
-
-        const todayDate = new Date();
-        const oneYearAgoDate = new Date();
-        oneYearAgoDate.setFullYear(todayDate.getFullYear() - 1);
         
-        const today = todayDate.toISOString().split('T')[0];
-        const oneYearAgo = oneYearAgoDate.toISOString().split('T')[0];
-
-        heatmapChart.setOption({
-          tooltip: {
-            position: 'top',
-            formatter: function(p) {
-              const count = p.data[1] || 0;
-              return `${count} submissions on ${p.data[0]}`;
-            }
-          },
-          visualMap: {
-            show: false,
-            min: 0,
-            max: 15,
-            type: 'piecewise',
-            pieces: [
-              {value: 0, color: '#ebedf0'},
-              {min: 1, max: 2, color: '#9be9a8'},
-              {min: 3, max: 5, color: '#40c463'},
-              {min: 6, max: 10, color: '#30a14e'},
-              {min: 11, color: '#216e39'}
-            ]
-          },
-          calendar: {
-            top: 30, left: 30, right: 10, bottom: 10,
-            cellSize: ['auto', 15],
-            range: [oneYearAgo, today],
-            itemStyle: { borderWidth: 3, borderColor: '#fff' },
-            yearLabel: { show: false },
-            splitLine: { show: false },
-            dayLabel: { nameMap: ['S', 'M', 'T', 'W', 'T', 'F', 'S'], color: '#7a7a7a' },
-            monthLabel: { color: '#7a7a7a' }
-          },
-          series: {
-            type: 'heatmap',
-            coordinateSystem: 'calendar',
-            data: heatmapPoints
+        const grid = document.getElementById('lc-heatmap-grid');
+        const monthsContainer = document.getElementById('lc-heatmap-months');
+        grid.innerHTML = '';
+        monthsContainer.innerHTML = '';
+        
+        // We want exactly 52 weeks ending on the closest upcoming Saturday
+        const endDate = new Date();
+        const offset = 6 - endDate.getDay(); // days until Saturday
+        endDate.setDate(endDate.getDate() + offset);
+        
+        // Start date is exactly 364 days before the end date (52 weeks inclusive)
+        const startDate = new Date(endDate);
+        startDate.setDate(endDate.getDate() - 363);
+        
+        const totalDays = 364;
+        const totalColumns = 52;
+        
+        const monthNames = ['Jan', 'Feb', 'Mar', 'Apr', 'May', 'Jun', 'Jul', 'Aug', 'Sep', 'Oct', 'Nov', 'Dec'];
+        let lastMonth = -1;
+        let currentColumn = 0;
+        
+        for (let i = 0; i < totalDays; i++) {
+          const currentDate = new Date(startDate);
+          currentDate.setDate(startDate.getDate() + i);
+          
+          const dateString = currentDate.toISOString().split('T')[0];
+          const count = submissionsByDate.get(dateString) || 0;
+          
+          const cell = document.createElement('div');
+          // Responsive perfectly square cell with small rounded corners
+          cell.className = 'w-full aspect-square rounded-[2px] transition-colors duration-200';
+          cell.title = `${count} submissions on ${dateString}`;
+          
+          // LeetCode color scale
+          if (count === 0) {
+            cell.classList.add('bg-gray-200');
+          } else if (count <= 2) {
+            cell.classList.add('bg-green-300');
+          } else if (count <= 5) {
+            cell.classList.add('bg-green-500');
+          } else if (count <= 10) {
+            cell.classList.add('bg-green-600');
+          } else {
+            cell.classList.add('bg-green-800');
           }
-        });
-      }
-
-      // 3. Prepare Rating Graph Data
-      if (contestData && contestData.contestParticipation) {
-        const ratingPoints = [];
-        contestData.contestParticipation.forEach(c => {
-          const date = new Date(c.contest.startTime * 1000).toISOString().split('T')[0];
-          ratingPoints.push([date, Math.round(c.rating)]);
-        });
-
-        ratingChart.setOption({
-          tooltip: { trigger: 'axis', formatter: '{b} <br/> Rating: {c}' },
-          grid: { top: 10, left: 40, right: 20, bottom: 30 },
-          xAxis: { 
-            type: 'time', 
-            splitLine: { show: false },
-            axisLine: { lineStyle: { color: '#ccc' } },
-            axisLabel: { color: '#7a7a7a' }
-          },
-          yAxis: { 
-            type: 'value', 
-            min: 'dataMin',
-            splitLine: { lineStyle: { color: '#f0f0f0' } },
-            axisLabel: { color: '#7a7a7a' }
-          },
-          series: [{
-            type: 'line',
-            data: ratingPoints,
-            smooth: true,
-            lineStyle: { color: '#f59e0b', width: 3 },
-            itemStyle: { color: '#f59e0b' },
-            areaStyle: {
-              color: new echarts.graphic.LinearGradient(0, 0, 0, 1, [
-                { offset: 0, color: 'rgba(245, 158, 11, 0.4)' },
-                { offset: 1, color: 'rgba(245, 158, 11, 0.05)' }
-              ])
+          
+          grid.appendChild(cell);
+          
+          // Month labels attached to Sundays
+          if (currentDate.getDay() === 0) {
+            if (currentDate.getMonth() !== lastMonth) {
+              lastMonth = currentDate.getMonth();
+              const monthLabel = document.createElement('div');
+              monthLabel.textContent = monthNames[lastMonth];
+              monthLabel.style.position = 'absolute';
+              // Align exactly with the column's percentage
+              monthLabel.style.left = `${(currentColumn / totalColumns) * 100}%`;
+              monthsContainer.appendChild(monthLabel);
             }
-          }]
-        });
+            currentColumn++;
+          }
+        }
+        
+        document.getElementById('lc-heatmap-loading').classList.add('hidden');
+        document.getElementById('lc-heatmap-container').classList.remove('hidden');
       }
-
-      document.getElementById('lc-charts-loading').classList.add('hidden');
-      document.getElementById('lc-charts-container').classList.remove('hidden');
-
-      // Make charts responsive
-      window.addEventListener('resize', () => {
-        heatmapChart.resize();
-        ratingChart.resize();
-      });
 
     } catch (error) {
-      document.getElementById('lc-charts-loading').textContent = 'Error fetching graphs.';
+      document.getElementById('leetcode-loading').textContent = 'Error fetching stats.';
+      document.getElementById('lc-heatmap-loading').textContent = 'Error fetching graph.';
       console.error('Error fetching LeetCode data:', error);
     }
   }

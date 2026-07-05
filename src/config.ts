@@ -14,7 +14,7 @@ export const siteConfig = {
     "My engineering approach emphasizes performance, scalability, and robust architecture. I have a strong foundation in C++ systems programming, having built custom interpreters, Redis-compatible in-memory databases, and POSIX-compliant shells from scratch. " +
     "I thrive on solving complex backend challenges, from spatial indexing and routing algorithms to orchestrating distributed system integrations.",
   skills: [
-    "C++", "Python", "Bash", "JavaScript", 
+    "System Design (HLD)", "C++", "Python", "Bash", "JavaScript", 
     "Node.js", "Express.js", "REST APIs", "TCP Sockets", 
     "SQL", "MongoDB", "Redis", 
     "Process Management", "IPC Pipes", "Git", "Linux", "CMake"

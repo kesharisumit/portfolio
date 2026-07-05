@@ -77,7 +77,6 @@ export const siteConfig = {
       achievements: [
         "Graduated with 7.5 GPA",
         "First Runner Up: IS3, IIT Jodhpur's ACM Student Chapter Ideathon, 2022",
-        "Majored in security, privacy preservation and blockchain",
       ],
     },
     {

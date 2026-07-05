@@ -40,6 +40,13 @@ export const siteConfig = {
         "Engineered a routing backend that dynamically ingests real-world road networks from the OpenStreetMap Overpass API, implementing 5 pathfinding algorithms (Dijkstra, A*, Bidirectional Dijkstra) with custom MinHeap data structures and a spatial grid index for O(1) nearest-node lookups.",
       link: "https://github.com/kesharisumit",
       skills: ["Node.js", "Graph Algorithms", "Spatial Indexing", "OpenStreetMap"],
+    },
+    {
+      name: "DevTinder — Developer Matchmaking Platform",
+      description:
+        "Engineered a full-stack MERN application connecting developers, featuring a scalable Express backend with MongoDB, JWT authentication, and AWS SES integration. Built a responsive React frontend utilizing Redux Toolkit for state management, Tailwind CSS, and DaisyUI.",
+      link: "https://github.com/kesharisumit",
+      skills: ["React.js", "Node.js", "Express.js", "MongoDB", "Redux Toolkit", "Tailwind CSS"],
     }
   ],
   publications: [],

@@ -81,6 +81,13 @@ import { siteConfig } from "../config";
         fetch('https://alfa-leetcode-api.onrender.com/ksri_sumit/calendar')
       ]);
       
+      if (!contestRes.ok || !calendarRes.ok) {
+        if (contestRes.status === 429 || calendarRes.status === 429) {
+          throw new Error('Rate limit exceeded (429)');
+        }
+        throw new Error('API fetch failed');
+      }
+      
       const contestData = await contestRes.json();
       const calendarData = await calendarRes.json();
       
@@ -175,8 +182,21 @@ import { siteConfig } from "../config";
       }
 
     } catch (error) {
-      document.getElementById('leetcode-loading').textContent = 'Error fetching stats.';
-      document.getElementById('lc-heatmap-loading').textContent = 'Error fetching graph.';
+      const loadingText = document.getElementById('leetcode-loading');
+      const heatmapLoading = document.getElementById('lc-heatmap-loading');
+      
+      const errorMsg = error.message.includes('429') 
+        ? 'Rate limit exceeded. Please try again in a few minutes.' 
+        : 'Error fetching stats.';
+        
+      loadingText.textContent = errorMsg;
+      heatmapLoading.textContent = errorMsg;
+      
+      loadingText.classList.add('text-amber-600', 'font-medium');
+      loadingText.classList.remove('text-gray-500');
+      heatmapLoading.classList.add('text-amber-600', 'font-medium');
+      heatmapLoading.classList.remove('text-gray-500');
+      
       console.error('Error fetching LeetCode data:', error);
     }
   }

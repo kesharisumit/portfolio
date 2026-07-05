@@ -1,0 +1,100 @@
+---
+import { siteConfig } from "../config";
+---
+
+<section id="stats" class="p-8 sm:p-12 md:p-16 lg:p-24 bg-gray-50 border-t border-gray-100">
+  <div class="grid grid-cols-1 lg:grid-cols-12 gap-8 lg:gap-16 items-start">
+    <div class="lg:col-span-4">
+      <h2 class="text-3xl sm:text-4xl md:text-5xl xl:text-7xl font-bold text-gray-900">
+        Live Stats
+      </h2>
+      <div
+        class="w-[75px] h-[5px] mt-2 rounded-full"
+        style={`background-color: ${siteConfig.accentColor}`}
+      />
+    </div>
+
+    <div class="lg:col-span-8">
+      <div class="space-y-8">
+        
+        {/* LeetCode Stats */}
+        <div class="bg-white rounded-lg shadow-sm border border-gray-100 p-4 sm:p-5 md:p-6 hover:shadow-md transition-shadow duration-300">
+          <div class="flex flex-col sm:flex-row sm:items-center sm:justify-between mb-4">
+            <div>
+              <h3 class="text-lg sm:text-xl font-semibold text-gray-900">LeetCode Rating</h3>
+              <p class="text-base sm:text-lg" style={`color: ${siteConfig.accentColor}`}>ksri_sumit</p>
+            </div>
+            <span id="leetcode-loading" class="text-sm text-gray-500 mt-2 sm:mt-0">Fetching live data...</span>
+          </div>
+          
+          <div id="leetcode-stats" class="hidden">
+            <div class="grid grid-cols-2 md:grid-cols-4 gap-4 mt-4">
+              <div class="p-4 bg-gray-50 rounded-lg border border-gray-100 text-center">
+                <p class="text-xs text-gray-500 uppercase tracking-wider font-semibold">Rating</p>
+                <p id="lc-rating" class="text-2xl font-bold text-gray-900 mt-1">--</p>
+              </div>
+              <div class="p-4 bg-gray-50 rounded-lg border border-gray-100 text-center">
+                <p class="text-xs text-gray-500 uppercase tracking-wider font-semibold">Global Rank</p>
+                <p id="lc-ranking" class="text-2xl font-bold text-gray-900 mt-1">--</p>
+              </div>
+              <div class="p-4 bg-gray-50 rounded-lg border border-gray-100 text-center">
+                <p class="text-xs text-gray-500 uppercase tracking-wider font-semibold">Top %</p>
+                <p id="lc-top" class="text-2xl font-bold text-gray-900 mt-1">--</p>
+              </div>
+              <div class="p-4 bg-gray-50 rounded-lg border border-gray-100 text-center">
+                <p class="text-xs text-gray-500 uppercase tracking-wider font-semibold">Contests</p>
+                <p id="lc-contests" class="text-2xl font-bold text-gray-900 mt-1">--</p>
+              </div>
+            </div>
+          </div>
+        </div>
+
+        {/* GitHub Contribution Graph */}
+        <div class="bg-white rounded-lg shadow-sm border border-gray-100 p-4 sm:p-5 md:p-6 hover:shadow-md transition-shadow duration-300 overflow-hidden">
+          <div class="flex flex-col sm:flex-row sm:items-center sm:justify-between mb-4">
+            <div>
+              <h3 class="text-lg sm:text-xl font-semibold text-gray-900">GitHub Contributions</h3>
+              <p class="text-base sm:text-lg" style={`color: ${siteConfig.accentColor}`}>kesharisumit</p>
+            </div>
+          </div>
+          <div class="mt-4 overflow-x-auto">
+            <img 
+              src={`https://ghchart.rshah.org/${siteConfig.accentColor.replace('#', '')}/kesharisumit`} 
+              alt="kesharisumit's Github Chart" 
+              class="w-full min-w-[700px]"
+            />
+          </div>
+        </div>
+
+      </div>
+    </div>
+  </div>
+</section>
+
+<script>
+  // Fetch LeetCode Contest Stats
+  async function fetchLeetCodeStats() {
+    try {
+      const response = await fetch('https://alfa-leetcode-api.onrender.com/ksri_sumit/contest');
+      const data = await response.json();
+      
+      if (data && data.contestRating) {
+        document.getElementById('lc-rating').textContent = Math.round(data.contestRating).toString();
+        document.getElementById('lc-ranking').textContent = data.contestGlobalRanking.toLocaleString();
+        document.getElementById('lc-top').textContent = data.contestTopPercentage + '%';
+        document.getElementById('lc-contests').textContent = data.contestAttend.toString();
+        
+        document.getElementById('leetcode-loading').classList.add('hidden');
+        document.getElementById('leetcode-stats').classList.remove('hidden');
+      } else {
+        document.getElementById('leetcode-loading').textContent = 'Unable to load rating at this time.';
+      }
+    } catch (error) {
+      document.getElementById('leetcode-loading').textContent = 'Error fetching live stats.';
+      console.error('Error fetching LeetCode stats:', error);
+    }
+  }
+
+  // Execute on load
+  document.addEventListener('DOMContentLoaded', fetchLeetCodeStats);
+</script>

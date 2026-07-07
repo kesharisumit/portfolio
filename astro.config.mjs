@@ -6,6 +6,6 @@ export default defineConfig({
     vite: {
     plugins: [tailwindcss()],
   },
-  site: 'https://kesharisumit.github.io',
-  base: '/portfolio',
+  site: 'https://sumitkeshari.is-a.dev',
+  base: '/',
 });

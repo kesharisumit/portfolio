@@ -3,9 +3,7 @@
 A modern, responsive personal portfolio built with [Astro](https://astro.build/) and [Tailwind CSS](https://tailwindcss.com/).
 
 ## Live Demo
-Currently hosted at: [https://kesharisumit.github.io/portfolio/](https://kesharisumit.github.io/portfolio/)
-
-*(Pending custom domain: `https://sumitkeshari.is-a.dev`)*
+Currently hosted at: [https://sumitkeshari.is-a.dev](https://sumitkeshari.is-a.dev)
 
 ## Features
 - **Dynamic LeetCode Heatmap**: Uses a custom API to fetch and render a real-time GitHub-style activity calendar for LeetCode submissions.
